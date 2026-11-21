@@ -115,6 +115,10 @@ python src/eval.py --pred eval/results/pred_smoke.jsonl --out eval/results/metri
 python api.py        # http://127.0.0.1:8000
 ```
 
+Windows 下也可以直接双击仓库根目录的 `start_demo.cmd`：它会启动服务、等 40 秒再把浏览器打开，
+关窗即停。**关掉电脑再开机后，服务不会自己起来**，需要重新跑这一条命令（模型和索引都在磁盘上，
+所以第二次启动也是 5 秒左右，不用重新下载、不用重建索引）。
+
 ## 生成层（防胡说）
 
 检索给的是"可能相关"，生成要负责"别编"。三道闸口，每道都对应一个可测的指标：
