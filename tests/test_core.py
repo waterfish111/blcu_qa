@@ -14,6 +14,7 @@ sys.path.insert(0, os.path.join(ROOT, "src"))
 import chunk as chunk_mod  # noqa: E402
 import eval as eval_mod  # noqa: E402
 import generate as gen  # noqa: E402
+import parse as parse_mod  # noqa: E402
 
 HANDBOOK = """第一章 学籍管理
 第一节 入学与注册
@@ -278,6 +279,62 @@ class MajorSplitTest(unittest.TestCase):
                 "数字经济专业\n一、培养目标\n培养数字经济人才。")
         chunks = chunk_mod.chunk_doc({"doc_id": "p", "text": text, "doc_type": "培养方案"})
         self.assertTrue(any("数字经济专业" in c["section_path"] for c in chunks))
+
+
+class UnindexedTableTest(unittest.TestCase):
+    """2025 版把表画成了矢量图形：要让系统说"这页我读不到"，而不是编个数字。"""
+
+    MARKER = ("【未索引】第 12 页的表格（表一：教学时间总表）是用矢量线条绘制的，"
+              "文字没有进入 PDF 文本层，表格内容未能索引。")
+
+    def test_line_carries_page_and_reason(self):
+        line = parse_mod.unindexed_line(12, ["表一：教学时间总表"])
+        self.assertIn(parse_mod.UNINDEXED_MARK, line)
+        self.assertIn("第 12 页", line)
+        self.assertIn("矢量", line)
+
+    def test_marker_becomes_its_own_chunk(self):
+        text = ("人工智能专业（080717T）\n一、培养目标\n本专业培养人工智能人才。\n"
+                + self.MARKER + "\n二、核心课程\n机器学习、深度学习。")
+        chunks = chunk_mod.chunk_doc({"doc_id": "p", "text": text}, mode="major")
+        marks = [c for c in chunks if c["text"].startswith(chunk_mod.UNINDEXED_MARK)]
+        self.assertEqual(len(marks), 1)
+        self.assertTrue(marks[0]["section_path"].endswith(chunk_mod.UNINDEXED_LABEL))
+        # 证据不能混进课程段，否则看起来像"这张表已经索引过了"
+        self.assertFalse([c for c in chunks
+                          if chunk_mod.UNINDEXED_MARK in c["text"]
+                          and not c["text"].startswith(chunk_mod.UNINDEXED_MARK)])
+
+    def _marker_chunk(self, score):
+        return {"chunk_id": "p#c9", "title": "2025版培养方案",
+                "section_path": "经济学 > 未索引表格", "article_no": "",
+                "text": self.MARKER, "score": score}
+
+    def test_answer_names_the_page(self):
+        out = gen.answer("2025 版经济学专业体育课多少学分", [self._marker_chunk(0.31)], 0.10)
+        self.assertTrue(out["abstained"])
+        self.assertEqual(out["reason"], "unindexed")
+        self.assertIn("第 12 页", out["answer"])
+
+    def test_weak_match_still_says_no_evidence(self):
+        out = gen.answer("宿舍晚上几点熄灯", [self._marker_chunk(0.01)], 0.02)
+        self.assertEqual(out["reason"], "no_evidence")
+
+    def test_model_abstain_on_marker_page_drops_generic_line(self):
+        """模型自己拒答、但命中的正是"读不到的那张表"：要说清是表读不到，
+        而不是留一句泛泛的"文档中未涉及"。"""
+        chunk = dict(self._marker_chunk(0.991),
+                     text=self.MARKER + "\n经济学（数智分析）专业")
+        model_reply = ("这页的表格读不到，无法列出具体课程。"
+                       "依据：第 12 页的表格（表一：教学时间总表）是矢量图形[1]。"
+                       + gen.ABSTAIN_TEXT)
+        import unittest.mock as mock
+        with mock.patch.object(gen, "compose", return_value=model_reply):
+            out = gen.answer("2025 版经济学专业外语必修课有哪些课程", [chunk], 0.991)
+        self.assertTrue(out["abstained"])
+        self.assertEqual(out["reason"], "unindexed")
+        self.assertNotIn(gen.ABSTAIN_TEXT, out["answer"])
+        self.assertIn("读不到", out["answer"])
 
 
 if __name__ == "__main__":

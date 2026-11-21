@@ -39,6 +39,19 @@ def pdf_text(path, min_chars_per_page=120):
 TABLE_HINT = ("课程计划", "教学计划", "开课", "课内实验")
 TABLE_MARK = "【表格】"
 
+# 2025 版把「表一：教学时间总表」这类表用矢量线条画出来，文字没进文本层：
+# 框线能识别、单元格却是空的。识别到这种情况时留一条「未索引」说明，
+# 让检索和生成都能明确回答"这一页读不到"，而不是猜一个数字。
+TABLE_CAPTION_RE = re.compile(r"表\s*[一二三四五六七八九十\d]{1,3}\s*[：:]\s*[^\s，,。；;]{2,12}")
+UNINDEXED_MARK = "【未索引】"
+
+
+def unindexed_line(page_no, captions):
+    """一句话说明"这一页有表、但表不在文本层"。"""
+    names = "、".join(captions[:4])
+    return ("%s第 %d 页的表格（%s）是用矢量线条绘制的，文字没有进入 PDF 文本层，"
+            "表格内容未能索引。" % (UNINDEXED_MARK, page_no, names))
+
 
 def pdf_tables(path):
     """返回 [[表头..., 行...], ...]，抽取失败返回空列表。"""
@@ -83,8 +96,10 @@ def pdf_doc(path, with_tables=True, min_chars_per_page=120):
             % (os.path.basename(path), avg))
 
     n_tables = 0
+    n_unindexed = 0
     if with_tables:
         hot = [i for i, t in enumerate(pages) if any(k in t for k in TABLE_HINT)]
+        got = set()
         if hot:
             import pdfplumber
             with pdfplumber.open(path) as pdf:
@@ -103,7 +118,16 @@ def pdf_doc(path, with_tables=True, min_chars_per_page=120):
                     if blocks:
                         pages[i] = pages[i] + "\n\n" + TABLE_MARK + "\n" + "\n\n".join(blocks)
                         n_tables += len(blocks)
-    return clean("\n".join(pages)), len(pages), n_tables
+                        got.add(i)
+        # 有表标题、却没抽出任何块 → 多半是矢量图形画的表（2025 版就是这样）
+        for i, t in enumerate(pages):
+            if i in got:
+                continue
+            caps = TABLE_CAPTION_RE.findall(t)
+            if caps:
+                pages[i] = pages[i] + "\n" + unindexed_line(i + 1, caps)
+                n_unindexed += 1
+    return clean("\n".join(pages)), len(pages), n_tables, n_unindexed
 
 
 def load_metadata(path):
@@ -132,11 +156,11 @@ def main():
                 skipped += 1
                 continue
             try:
-                pages = n_tables = 0
+                pages = n_tables = n_unindexed = 0
                 if name.lower().endswith(".pdf"):
-                    text, pages, n_tables = pdf_doc(path, with_tables=not args.no_tables)
-                    print("[ok] %s  %d 页  %d 字  %d 张表"
-                          % (name, pages, len(text), n_tables))
+                    text, pages, n_tables, n_unindexed = pdf_doc(path, with_tables=not args.no_tables)
+                    print("[ok] %s  %d 页  %d 字  %d 张表  %d 页表格未索引"
+                          % (name, pages, len(text), n_tables, n_unindexed))
                 elif name.lower().endswith((".html", ".htm")):
                     text = html_text(path)
                 else:
@@ -158,6 +182,7 @@ def main():
                 "version_policy": m.get("version_policy", "supersede"),
                 "page_count": pages,
                 "table_count": n_tables,
+                "unindexed_pages": n_unindexed,
                 "text": text,
             }
             fout.write(json.dumps(doc, ensure_ascii=False) + "\n")

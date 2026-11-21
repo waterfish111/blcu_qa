@@ -44,6 +44,9 @@ HEADER_RE = re.compile(
 )
 MAJOR_MARK = "【专业】"
 TABLE_MARK = "【表格】"
+# 解析层发现"这一页有表、但表是矢量图形画的"时留下的说明行，单独成块
+UNINDEXED_MARK = "【未索引】"
+UNINDEXED_LABEL = "未索引表格"
 # 每份培养方案开头的标题行：「经济学（数智分析）专业培养方案」「金融学专业第二学士学位培养方案」
 TITLE_RE = re.compile(
     r"^\s*(?P<name>[^，,。：:]{2,30}?(?:专业|实验班|方向)(?:第二学士学位)?)\s*培养方案\s*$"
@@ -204,6 +207,12 @@ def split_major(text, max_chars, overlap):
         if stripped == TABLE_MARK:
             flush()
             table_label = "课程计划表"
+            continue
+        if stripped.startswith(UNINDEXED_MARK):
+            # 这条说明要和正文分开：它自己就是一条"我没读到"的证据，
+            # 混进课程段里会让人以为那张表已经索引过了。
+            flush()
+            blocks.append((" > ".join(x for x in (major, UNINDEXED_LABEL) if x), stripped))
             continue
         m_ch = CHAPTER_RE.match(stripped)
         if m_ch:

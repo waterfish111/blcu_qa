@@ -13,6 +13,9 @@ import re
 
 ABSTAIN_TEXT = "文档中未涉及该问题，建议咨询教务处或查阅最新版学生手册。"
 
+# 解析层留下的"这一页的表是矢量图形、没进文本层"的说明行
+UNINDEXED_MARK = "【未索引】"
+
 PROMPT = """你是北京语言大学教务规定的问答助手。只依据下面提供的资料片段回答，不得使用外部知识。
 
 规则：
@@ -20,6 +23,8 @@ PROMPT = """你是北京语言大学教务规定的问答助手。只依据下�
 2. 每个结论句后必须标注来源编号，如 [1][2]，编号必须来自下方片段。
 3. 涉及年级差异时，先说明适用哪个年级的方案，再给结论。
 4. 答案控制在 200 字内，先给结论，再给依据。
+5. 若片段里出现「{unindexed}」，说明那一页的表格是矢量图形、文字没进文本层：
+   要如实说"这页的表格读不到"，并给出页码，不能凭印象补数字。
 
 资料片段：
 {context}
@@ -64,8 +69,8 @@ def build_context(chunks):
 
 
 def compose(chunks, question, model="deepseek-chat", temperature=0.1):
-    prompt = PROMPT.format(abstain=ABSTAIN_TEXT, context=build_context(chunks),
-                           question=question)
+    prompt = PROMPT.format(abstain=ABSTAIN_TEXT, unindexed=UNINDEXED_MARK,
+                           context=build_context(chunks), question=question)
     try:
         from openai import OpenAI
         load_dotenv()
@@ -214,16 +219,49 @@ def trim_unsupported(text, chunks, question=""):
     return "".join(kept)
 
 
+UNINDEXED_RE = re.compile(r"第\s*(\d+)\s*页的表格（([^）]*)）")
+
+
+def unindexed_hits(chunks):
+    """挑出"表格没进文本层"的说明块，返回 [(chunk, 页码, 表名), ...]。"""
+    out = []
+    for c in chunks:
+        text = c.get("text") or ""
+        if UNINDEXED_MARK not in text:
+            continue
+        m = UNINDEXED_RE.search(text)
+        if m:
+            out.append((c, m.group(1), m.group(2)))
+    return out
+
+
+def unindexed_answer(hit):
+    _, page, names = hit
+    return ("这个问题要查的表格在 PDF 第 %s 页（%s），但这份文件把那张表画成了矢量图形，"
+            "文字没有进入文本层，我读不到表格里的数字。可以翻 PDF 第 %s 页核对；"
+            "如果只是想了解大致口径，可以改问 2026 或 2024 版培养方案里的同类表。"
+            % (page, names, page))
+
+
 def answer(question, retrieved, top_score, threshold=0.35, chunks_limit=5, debug=False):
     """检索片段 → 答案。reason 说明结论是从哪来的，方便评测时分开统计：
 
       no_evidence      重排分不够，直接拒答（没调模型，不花钱）
+      unindexed        这条正好落在"表格是矢量图形、文本层没有"的那几页上
       citation_failed  答了两次，引用都对不上原文，改成拒答
       no_citation      答了但一句 [n] 都没标（等于来源不明）
       ok               正常，引用校验通过
     """
     chunks = retrieved[:chunks_limit]
     if not chunks or top_score < threshold:
+        hits = unindexed_hits(retrieved[:10])
+        if hits:
+            best = max(hits, key=lambda h: h[0].get("score") or 0)
+            score = best[0].get("score") or 0
+            # 太弱的相关不算：否则任何"查不到"的题都会被推给某一页表
+            if score >= 0.2 and score >= 0.6 * max(top_score, 1e-6):
+                return {"answer": unindexed_answer(best), "abstained": True,
+                        "reason": "unindexed", "used_chunk_ids": [], "citation_ok": True}
         return {"answer": ABSTAIN_TEXT, "abstained": True, "reason": "no_evidence",
                 "used_chunk_ids": [], "citation_ok": True}
 
@@ -251,6 +289,14 @@ def answer(question, retrieved, top_score, threshold=0.35, chunks_limit=5, debug
                 "used_chunk_ids": [], "citation_ok": False}
 
     if ABSTAIN_TEXT in text:  # 模型自己判断"资料里没有"，这是正常拒答，不是没标引用
+        # 如果拒答的理由是"这张表是矢量图形、读不到"，那就不是泛泛的"未涉及"，
+        # 要说清楚，并把那句通用兜底话去掉，免得看上去像没查。
+        unindexed = any(UNINDEXED_MARK in (c.get("text") or "")
+                        for c in retrieved[:chunks_limit])
+        if unindexed:
+            text = text.replace(ABSTAIN_TEXT, "").strip() or text
+            return {"answer": text, "abstained": True, "reason": "unindexed",
+                    "used_chunk_ids": [], "citation_ok": True}
         return {"answer": text, "abstained": True, "reason": "model_abstained",
                 "used_chunk_ids": [], "citation_ok": True}
 

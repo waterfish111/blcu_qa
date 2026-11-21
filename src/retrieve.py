@@ -230,6 +230,10 @@ class HybridRetriever:
             ids, top_score, score_map = self._rerank(query, fused, topk)
         else:
             ids, top_score, score_map = fused[:topk], 1.0, {}
+        chunks = []
+        for cid in ids:
+            item = dict(self.by_id[cid])
+            item["score"] = score_map.get(cid, 0.0)
+            chunks.append(item)
         return {"chunk_ids": ids, "top_score": top_score,
-                "scores": score_map,
-                "chunks": [self.by_id[c] for c in ids]}
+                "scores": score_map, "chunks": chunks}

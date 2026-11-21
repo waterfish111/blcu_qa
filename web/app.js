@@ -20,7 +20,30 @@ const REASON_TEXT = {
   citation_failed: "回答里引用的内容在原文里找不到",
   no_citation: "模型回答了，但没有标出处",
   model_abstained: "模型认为语料里没有依据",
+  unindexed: "这一页的表格在 PDF 里是画出来的，读不到文字",
   api_error: "调用大模型接口失败",
+};
+
+const ABSTAIN_BOX = {
+  unindexed: {
+    icon: "📄",
+    title: "这一页的表格读不出来",
+    text: (d) => `命中的那几页，表格是用矢量线条画在 PDF 上的，文字层里只有零散数字，
+      没有行列关系。与其猜，不如告诉你页码，自己翻一眼：最高相关度 ${d.top_score.toFixed(3)}。`,
+  },
+  model_abstained: {
+    icon: "🔍",
+    title: "模型判断资料里没有依据",
+    text: () => `检索到的片段相关度不低，但模型读完认为答不出这个问题——
+      它没有硬凑一个答案。`,
+  },
+  default: {
+    icon: "🔍",
+    title: "这个问题在培养方案里查不到可靠依据",
+    text: (d) => `最高相关度 ${d.top_score.toFixed(3)}，低于拒答阈值 ${d.threshold}。
+      与其编一个看起来很像的答案，不如直接说"没有"——培养方案里的学分、学时数字一旦答错，
+      学生按错的数字排课，代价比不回答大得多。`,
+  },
 };
 
 let busy = false;
@@ -182,12 +205,16 @@ function renderResult(data, ms) {
   if (data.abstained) {
     const box = document.createElement("div");
     box.className = "abstain";
-    box.innerHTML = `<div class="icon">🔍</div><div>
-      <h3>这个问题在培养方案里查不到可靠依据</h3>
-      <p>最高相关度 ${data.top_score.toFixed(3)}，低于拒答阈值 ${data.threshold}。
-      与其编一个看起来很像的答案，不如直接说"没有"——培养方案里的学分、学时数字一旦答错，
-      学生按错的数字排课，代价比不回答大得多。</p></div>`;
+    const absorb = ABSTAIN_BOX[data.reason] || ABSTAIN_BOX.default;
+    box.innerHTML = `<div class="icon">${absorb.icon}</div><div>
+      <h3>${absorb.title}</h3><p>${absorb.text(data)}</p></div>`;
     panel.appendChild(box);
+    if (data.answer) {  // 拒答但模型给了一段解释（例如"这页表格读不到"）
+      const note = document.createElement("div");
+      note.className = "answer abstain-answer";
+      note.appendChild(renderAnswer(data.answer, data.used));
+      panel.appendChild(note);
+    }
   } else {
     const answer = document.createElement("div");
     answer.className = "answer";
