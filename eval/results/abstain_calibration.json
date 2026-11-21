@@ -1,0 +1,220 @@
+{
+  "n": 30,
+  "answerable_min": 0.5163,
+  "abstain_max": 0.1767,
+  "gap": 0.3396,
+  "threshold": 0.35,
+  "separated": true,
+  "rows": [
+    {
+      "id": "q001",
+      "type": "直接条款",
+      "expect_abstain": false,
+      "top_score": 0.999,
+      "q": "2026 级数字经济专业准予毕业总学分是多少？"
+    },
+    {
+      "id": "q002",
+      "type": "直接条款",
+      "expect_abstain": false,
+      "top_score": 0.9985,
+      "q": "数字经济专业毕业后授予什么学士学位？"
+    },
+    {
+      "id": "q003",
+      "type": "直接条款",
+      "expect_abstain": false,
+      "top_score": 0.9997,
+      "q": "数字经济专业的专业核心课要求多少学分？"
+    },
+    {
+      "id": "q004",
+      "type": "直接条款",
+      "expect_abstain": false,
+      "top_score": 1.0,
+      "q": "金融学（数智金融）专业准予毕业总学分是多少？"
+    },
+    {
+      "id": "q005",
+      "type": "直接条款",
+      "expect_abstain": false,
+      "top_score": 0.9999,
+      "q": "金融学专业第二学士学位的准予毕业总学分是多少？"
+    },
+    {
+      "id": "q006",
+      "type": "直接条款",
+      "expect_abstain": false,
+      "top_score": 0.9998,
+      "q": "2026 级国际经济与贸易（数智商务）专业准予毕业总学分是多少？"
+    },
+    {
+      "id": "q007",
+      "type": "直接条款",
+      "expect_abstain": false,
+      "top_score": 0.9996,
+      "q": "2025 版经济学（数智分析）专业准予毕业课程学分是多少？"
+    },
+    {
+      "id": "q008",
+      "type": "直接条款",
+      "expect_abstain": false,
+      "top_score": 0.9918,
+      "q": "中国学生本科教育的学制是几年？"
+    },
+    {
+      "id": "q009",
+      "type": "跨小节",
+      "expect_abstain": false,
+      "top_score": 0.9999,
+      "q": "数字经济专业的社会实践 2 学分怎么获得？"
+    },
+    {
+      "id": "q010",
+      "type": "跨小节",
+      "expect_abstain": false,
+      "top_score": 0.9999,
+      "q": "专业及毕业实习的学分怎么认定？"
+    },
+    {
+      "id": "q011",
+      "type": "跨小节",
+      "expect_abstain": false,
+      "top_score": 0.9998,
+      "q": "数字经济专业的毕业论文（设计）要求多少学分？"
+    },
+    {
+      "id": "q012",
+      "type": "跨小节",
+      "expect_abstain": false,
+      "top_score": 0.5163,
+      "q": "2024 版对各专业总学分设的上限是多少？"
+    },
+    {
+      "id": "q013",
+      "type": "跨小节",
+      "expect_abstain": false,
+      "top_score": 0.9878,
+      "q": "2026 级通识教育选修课要修多少学分？"
+    },
+    {
+      "id": "q014",
+      "type": "表格数值",
+      "expect_abstain": false,
+      "top_score": 0.9869,
+      "q": "数字经济专业的体育课一共多少学分？"
+    },
+    {
+      "id": "q015",
+      "type": "表格数值",
+      "expect_abstain": false,
+      "top_score": 0.9952,
+      "q": "形势与政策这门课的总学时是多少？"
+    },
+    {
+      "id": "q016",
+      "type": "表格数值",
+      "expect_abstain": false,
+      "top_score": 0.9905,
+      "q": "军事技能课的学时和学分是多少？"
+    },
+    {
+      "id": "q017",
+      "type": "表格数值",
+      "expect_abstain": false,
+      "top_score": 0.9921,
+      "q": "思想道德与法治这门课几学分？"
+    },
+    {
+      "id": "q018",
+      "type": "表格数值",
+      "expect_abstain": false,
+      "top_score": 0.9993,
+      "q": "数字经济专业公共必修课合计多少学分、多少学时？"
+    },
+    {
+      "id": "q019",
+      "type": "表格数值",
+      "expect_abstain": false,
+      "top_score": 0.9383,
+      "q": "大学计算机B 的总学时是多少？"
+    },
+    {
+      "id": "q020",
+      "type": "跨届",
+      "expect_abstain": false,
+      "top_score": 0.9991,
+      "q": "2025 版会计学（数智会计）专业的课程总学时是多少？"
+    },
+    {
+      "id": "q021",
+      "type": "跨届",
+      "expect_abstain": false,
+      "top_score": 0.9922,
+      "q": "2024 版金融学专业的课程总学时是多少？"
+    },
+    {
+      "id": "q022",
+      "type": "跨届",
+      "expect_abstain": false,
+      "top_score": 0.9983,
+      "q": "2024 版汉语言文学专业准予毕业课程学分是多少？"
+    },
+    {
+      "id": "q023",
+      "type": "跨届",
+      "expect_abstain": false,
+      "top_score": 0.5441,
+      "q": "2024 版外语专业的总学分上限比非外语专业高多少？"
+    },
+    {
+      "id": "q024",
+      "type": "跨届",
+      "expect_abstain": false,
+      "top_score": 0.9997,
+      "q": "2024 版数据科学与大数据技术专业准予毕业课程学分是多少？"
+    },
+    {
+      "id": "q025",
+      "type": "应拒答",
+      "expect_abstain": true,
+      "top_score": 0.006,
+      "q": "食堂几点开门？"
+    },
+    {
+      "id": "q026",
+      "type": "应拒答",
+      "expect_abstain": true,
+      "top_score": 0.1767,
+      "q": "学生违纪处分的流程是什么？"
+    },
+    {
+      "id": "q027",
+      "type": "应拒答",
+      "expect_abstain": true,
+      "top_score": 0.1185,
+      "q": "图书馆周末开放到几点？"
+    },
+    {
+      "id": "q028",
+      "type": "应拒答",
+      "expect_abstain": true,
+      "top_score": 0.0264,
+      "q": "校医院在哪个楼、怎么挂号？"
+    },
+    {
+      "id": "q029",
+      "type": "应拒答",
+      "expect_abstain": true,
+      "top_score": 0.0055,
+      "q": "宿舍是四人间还是六人间？"
+    },
+    {
+      "id": "q030",
+      "type": "应拒答",
+      "expect_abstain": true,
+      "top_score": 0.07,
+      "q": "校园网怎么连、一个月多少钱？"
+    }
+  ]
+}

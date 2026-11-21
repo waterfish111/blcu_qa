@@ -1,0 +1,31 @@
+# 原始语料：含学校内部文件，不公开
+data/raw/
+data/docs.jsonl
+data/vectors_*.npz
+data/*.index
+data/*.faiss
+data/*.npy
+
+# 切块结果要进仓库：5.4MB，别人 clone 下来不装模型也能跑 BM25 演示
+# （正文全部来自公开的培养方案 PDF，可重新生成：python scripts/build_index.py --raw data/raw）
+
+# 本机模型路径（每台机器不一样）
+models.lock.json
+
+# 登录态，绝对不能提交
+cookies.txt
+*.cookie
+.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# 结果：指标 json 保留（是证据），逐题 pred 太大不进仓库
+eval/results/*.jsonl
+!eval/results/.gitkeep
+
+.DS_Store
+Thumbs.db
