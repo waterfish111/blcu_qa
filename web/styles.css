@@ -86,7 +86,7 @@ body {
 }
 #submit:hover { background: #17395f; }
 #submit:active { transform: translateY(1px); }
-#submit:disabled { background: #9aa6b8; cursor: progress; }
+#submit:disabled { background: #2a5490; cursor: progress; }
 
 .samples { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .samples-label { font-size: 13px; color: var(--ink-3); }

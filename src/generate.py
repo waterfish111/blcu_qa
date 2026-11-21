@@ -306,6 +306,11 @@ def answer(question, retrieved, top_score, threshold=0.35, chunks_limit=5, debug
 
     used = [chunks[i - 1]["chunk_id"] for i in cited_indexes(text)
             if 1 <= i <= len(chunks)]
+    # 只引用了"这页表格读不到"的标记块，等于没回答问题：算拒答，但要说清是缺数据
+    if used and all(UNINDEXED_MARK in (chunks[i - 1].get("text") or "")
+                    for i in cited_indexes(text) if 1 <= i <= len(chunks)):
+        return {"answer": text, "abstained": True, "reason": "unindexed",
+                "used_chunk_ids": used, "citation_ok": True}
     return {"answer": text, "abstained": False, "reason": "ok",
             "used_chunk_ids": used, "citation_ok": True, "trimmed": trimmed}
 

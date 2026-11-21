@@ -336,6 +336,18 @@ class UnindexedTableTest(unittest.TestCase):
         self.assertNotIn(gen.ABSTAIN_TEXT, out["answer"])
         self.assertIn("读不到", out["answer"])
 
+    def test_answer_citing_only_marker_chunk_counts_as_unindexed(self):
+        """模型没说"文档中未涉及"，只是照着标记块解释了一句——这也不算答了。"""
+        chunk = dict(self._marker_chunk(0.996),
+                     text=self.MARKER + "\n经济学（数智分析）专业")
+        model_reply = "依据：资料[1]说明第 12 页的表格（表一：教学时间总表）是矢量线条绘制、未能索引。"
+        import unittest.mock as mock
+        with mock.patch.object(gen, "compose", return_value=model_reply):
+            out = gen.answer("2025 版经济学专业外语必修课有哪些课程", [chunk], 0.996)
+        self.assertTrue(out["abstained"])
+        self.assertEqual(out["reason"], "unindexed")
+        self.assertTrue(out["citation_ok"])
+
 
 if __name__ == "__main__":
     unittest.main()
