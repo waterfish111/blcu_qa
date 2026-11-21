@@ -3,6 +3,27 @@
 面向北京语言大学本科培养方案的检索增强问答系统。语料是全校 2024 / 2025 / 2026 三个年级的培养方案
 （合订本共 4 卷），重点解决**结构切块**、**跨届版本隔离**、**混合检索**与**引用溯源**四个工程问题。
 
+## 演示
+
+<p>
+  <img src="docs/screenshots/answer.png" alt="正常作答：答案 + 每句话的出处" width="48%">
+  <img src="docs/screenshots/abstain.png" alt="拒答：语料里没有的问题直接说没有" width="48%">
+</p>
+
+左边是正常作答：答案里的 `[1]` 是可点的角标，点一下会跳到下面第 1 段原文，卡片上带着
+「专业 > 小节」的路径和重排分数。右边是拒答：问"宿舍几点熄灯"，最高相关度只有 0.004，
+系统直接说查不到，而不是编一个看起来很像的答案。
+
+跑起来只要 Python，不需要 node、不需要 npm、不需要构建前端：
+
+```bash
+python api.py                      # 起服务
+# 浏览器打开 http://127.0.0.1:8000
+```
+
+模型在本地（首次约 2GB 下载），也可以完全不装模型：没有 `sentence-transformers` 时检索自动
+降级为纯 BM25，页面照样能跑，只是召回差一截（见「检索基线」）。
+
 ## 语料与版本语义
 
 培养方案是**按届适用**的：2024 级学生永远按 2024 版执行，2026 版不会"取代"它。
@@ -22,6 +43,8 @@
 ```
 blcu-qa/
 ├── config.yaml            # 所有可调参数集中在这
+├── api.py                 # FastAPI 服务：/ask 接口 + 演示页托管（python api.py）
+├── web/                   # 演示页：index.html / styles.css / app.js（无构建、无 npm）
 ├── data/
 │   ├── raw/               # 原始 PDF，不进版本库（实际可放在仓库外）
 │   ├── metadata.csv       # 文档清单：年级、有效期、版本策略（scan_raw.py 生成）
@@ -66,6 +89,9 @@ cp .env.example .env      # 里面填 DEEPSEEK_API_KEY=sk-...
 python scripts/ask.py "2024 版汉语言文学专业准予毕业课程学分是多少？" --cohort 2024级
 python scripts/run_eval.py --limit 5 --pred eval/results/pred_smoke.jsonl
 python src/eval.py --pred eval/results/pred_smoke.jsonl --out eval/results/metrics_smoke.json
+
+# 6. 打开演示页（检索器启动时建一次索引，约 5 秒）
+python api.py        # http://127.0.0.1:8000
 ```
 
 ## 生成层（防胡说）
@@ -234,3 +260,8 @@ python scripts/fetch_models.py --which full    # bge-m3 + bge-reranker-v2-m3（�
 - 2024 版两卷 PDF 的字体 `/ToUnicode` 缺失，但实测正文中文可读（55%–84%），不影响入库
 - 条款跨版本对齐是启发式（章 + 条序号 + 标题相似度），未做人工全量校对
 - 无多轮对话、无用户系统
+- 检索是单机纯 CPU：一次提问 6–13 秒，其中约 6 秒花在 cross-encoder 逐段读 40 个候选；
+  演示页把这 40 段的分数也画出来了，就是为了让"慢在哪"可见而不是假装很快
+- 演示页刻意不引入前端框架与构建链（没有 npm / Vite / TS），换来"clone 下来 `python api.py`
+  就能开"；代价是没有组件化、没有类型检查，页面只服务于这一个问答场景
+- 答案缓存只存在进程内存里（32 条，先进先出），服务重启即失效

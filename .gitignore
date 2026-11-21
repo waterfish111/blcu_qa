@@ -29,3 +29,8 @@ eval/results/*.jsonl
 
 .DS_Store
 Thumbs.db
+
+# 本地跑服务时的日志
+.api.log
+.api.err
+

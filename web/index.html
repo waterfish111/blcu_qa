@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>教务通 · 北语培养方案问答</title>
+  <link rel="stylesheet" href="web/styles.css" />
+</head>
+<body>
+  <header class="hero">
+    <div class="wrap">
+      <div class="brand">
+        <span class="mark">教</span>
+        <div>
+          <h1>教务通</h1>
+          <p class="tagline">北京语言大学培养方案问答 · 检索 + 重排 + 大模型</p>
+        </div>
+      </div>
+      <p class="lede">
+        同一个问题，2024 / 2025 / 2026 三版培养方案里的答案常常不一样；2024 级学生永远按 2024 版执行。
+        这里把 4 份培养方案切成 <strong id="stat-chunks">5700</strong> 个片段，
+        先用关键词和向量各找一遍，再让重排模型挑出最相关的 5 段，最后只让模型照着这 5 段回答。
+        <strong>找不到依据就明说找不到</strong>，不猜。
+      </p>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="ask-card">
+      <form id="ask-form" autocomplete="off">
+        <div class="ask-row">
+          <input id="question" type="text" name="q" maxlength="200"
+                 placeholder="比如：2026 级数字经济专业准予毕业总学分是多少？" />
+          <select id="cohort" name="cohort" title="限定年级">
+            <option value="">不限年级</option>
+            <option value="2024级">2024 级</option>
+            <option value="2025级">2025 级</option>
+            <option value="2026级">2026 级</option>
+          </select>
+          <button id="submit" type="submit">提问</button>
+        </div>
+      </form>
+      <div class="samples" id="samples">
+        <span class="samples-label">试试：</span>
+        <button type="button" data-q="2026 级数字经济专业准予毕业总学分是多少？" data-c="2026级">毕业总学分</button>
+        <button type="button" data-q="2025 版经济学（数智分析）准予毕业课程学分是多少？" data-c="2025级">跨届对比</button>
+        <button type="button" data-q="数字经济专业体育课要修多少学分？" data-c="2026级">表格里的数字</button>
+        <button type="button" data-q="宿舍晚上几点熄灯？" data-c="">应该拒答的问题</button>
+      </div>
+    </section>
+
+    <section id="answer-panel" class="panel" hidden></section>
+
+    <section id="sources" class="sources" hidden>
+      <h2 class="sources-title">模型看到的 5 段原文<span id="sources-note"></span></h2>
+      <div id="source-list"></div>
+    </section>
+
+    <section id="empty" class="empty">
+      <p>问一个培养方案里真的写了的数字，或者故意问一个它没写的，看看它会不会胡说。</p>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <div class="wrap">
+      <span>语料：北京语言大学 2024 / 2025 / 2026 版本科人才培养方案（4 卷、1991 页）</span>
+      <span class="dot">·</span>
+      <span>检索 recall@5 0.71 · 拒答准确率 1.00 · 引用校验 4 道闸口</span>
+      <span class="dot">·</span>
+      <a href="https://github.com/waterfish111/blcu_qa" target="_blank" rel="noreferrer">源码</a>
+    </div>
+  </footer>
+
+  <script src="web/app.js"></script>
+</body>
+</html>

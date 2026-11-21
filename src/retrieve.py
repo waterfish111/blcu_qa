@@ -199,6 +199,7 @@ class HybridRetriever:
                 if self._allowed(self.chunks[i], cohort)][:topk]
 
     def _rerank(self, query, cand_ids, topk):
+        """返回 (ids, 最高分, {chunk_id: 分数})。分数给前端画卡片用。"""
         try:
             from sentence_transformers import CrossEncoder
             if self._reranker is None:
@@ -209,10 +210,13 @@ class HybridRetriever:
             pairs = [(query, index_text(self.by_id[c])) for c in cand_ids]
             scores = self._reranker.predict(pairs)
             ranked = sorted(zip(cand_ids, scores), key=lambda x: -x[1])
-            return [c for c, _ in ranked[:topk]], float(ranked[0][1]) if ranked else 0.0
+            top = ranked[:topk]
+            return ([c for c, _ in top],
+                    float(top[0][1]) if top else 0.0,
+                    {c: float(s) for c, s in ranked})
         except Exception:
             # 没有重排模型时，用融合顺序的结果和 1.0 兜底
-            return cand_ids[:topk], 1.0
+            return cand_ids[:topk], 1.0, {}
 
     def search(self, query, cohort="", topk=5, bm25_topk=20, dense_topk=20,
                use_rerank=True, include_superseded=False):
@@ -223,8 +227,9 @@ class HybridRetriever:
             lists.append(self._dense_rank(query, cohort, dense_topk))
         fused = rrf_fuse(lists, topk=max(bm25_topk, dense_topk)) if lists else []
         if use_rerank and fused:
-            ids, top_score = self._rerank(query, fused, topk)
+            ids, top_score, score_map = self._rerank(query, fused, topk)
         else:
-            ids, top_score = fused[:topk], 1.0
+            ids, top_score, score_map = fused[:topk], 1.0, {}
         return {"chunk_ids": ids, "top_score": top_score,
+                "scores": score_map,
                 "chunks": [self.by_id[c] for c in ids]}
