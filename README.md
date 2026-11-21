@@ -52,6 +52,12 @@ python api.py                      # 起服务
 `status`（`active` / `superseded`）只对 `supersede` 类文档有意义；培养方案一律 `active`。
 当前语料只有培养方案（`cohort` 类），`supersede` 分支留了实现与测试，等补入手册再启用。
 
+**语料怎么来**：原始 PDF 不在仓库里（体积大、也属于学校内部资料）。需要自己从
+**北京语言大学官方网站（教务处 / 本科生院）** 下载 2024、2025、2026 三版本科人才培养方案，
+放到 `data/raw/` 或任意目录，再用 `scripts/scan_raw.py --raw <你的目录>` 登记。
+文件名里带年级与版本号的（`…2026版本科人才培养方案.pdf`、`…培养方案（2025版）.pdf`）能被自动识别；
+2024 版分上下两册，按同一届的两个分卷处理（`_vol1` / `_vol2`）。
+
 ## 目录
 
 ```
@@ -86,12 +92,12 @@ blcu-qa/
 ```bash
 pip install -r requirements.txt
 
-# 1. 语料放在仓库外也行，直接指过去；先登记
-python scripts/scan_raw.py --raw "C:\Users\Lenovo\Desktop\培养方案" --out data/metadata.csv
+# 1. 语料放 data/raw/ 或任意目录，先登记（文件名里的年级/版本号会被自动识别）
+python scripts/scan_raw.py --raw data/raw --out data/metadata.csv
 
 # 2. 解析 + 切块（第一次建议先 --no-tables 跑通链路，再跑全量）
-python scripts/build_index.py --raw "C:\Users\Lenovo\Desktop\培养方案" --no-tables
-python scripts/build_index.py --raw "C:\Users\Lenovo\Desktop\培养方案"
+python scripts/build_index.py --raw data/raw --no-tables
+python scripts/build_index.py --raw data/raw
 
 # 3. 语料体检：碎片率、路径覆盖率、长度分布（改完切块逻辑后加 --rechunk）
 python scripts/quality_report.py --rechunk
@@ -265,20 +271,23 @@ PDF 文本层按列输出时，正文会被拆成一字一行，这个值就飙�
 
 ## 模型与缓存
 
-模型不在仓库里，统一放本机缓存目录（`models.lock.json` 记录真实路径，检索层优先读它）：
+模型不在仓库里，由 `scripts/fetch_models.py` 下载到 ModelScope 的本地缓存目录
+（默认 `MODELSCOPE_CACHE`，可用环境变量改），下载后的绝对路径记在 `models.lock.json` 里，
+检索层优先读它，读不到就退回模型名让 `sentence-transformers` 自己找：
 
-| 角色 | 模型 | 大小 | 位置 |
+| 角色 | 模型 | 大小 | 仓库 |
 |---|---|---|---|
-| embedding | `bge-small-zh-v1.5` | 183MB | `D:\ai_cache\modelscope\AI-ModelScope\bge-small-zh-v1___5` |
-| rerank | `bge-reranker-base` | 1.1GB | `D:\ai_cache\modelscope\BAAI\bge-reranker-base` |
+| embedding | `bge-small-zh-v1.5` | 183MB | `AI-ModelScope/bge-small-zh-v1.5` |
+| rerank | `bge-reranker-base` | 1.1GB | `BAAI/bge-reranker-base` |
 
-```powershell
+```bash
 python scripts/fetch_models.py --which small   # 上面两个
 python scripts/fetch_models.py --which full    # bge-m3 + bge-reranker-v2-m3（各约 2.3GB）
 ```
 
-下载走 ModelScope（实测 4 MB/s，HuggingFace 官方域名在本机不可达，`hf-mirror.com` 只有 0.9 MB/s）。
-脚本只取 `*.safetensors`，不下同一份权重的 `.bin` 与 `onnx`——否则 bge-reranker-base 会从 1.1GB 涨到 3.3GB。
+下载走 ModelScope（实测 4 MB/s；HuggingFace 官方域名在国内常不可达，`hf-mirror.com` 只有 0.9 MB/s，
+所以脚本按 ModelScope → HF 镜像的顺序试）。脚本只取 `*.safetensors`，不下同一份权重的 `.bin` 与
+`onnx`——否则 bge-reranker-base 会从 1.1GB 涨到 3.3GB。
 
 向量有缓存：`data/vectors_<模型名>.npz`，块列表变了会自动重算，避免向量和 chunk 错位。
 

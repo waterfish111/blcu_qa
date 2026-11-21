@@ -11,6 +11,8 @@ data/*.npy
 
 # 本机模型路径（每台机器不一样）
 models.lock.json
+# fetch_models.py 的默认下载目录
+models/
 
 # 登录态，绝对不能提交
 cookies.txt

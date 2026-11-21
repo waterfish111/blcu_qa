@@ -1,6 +1,6 @@
 """D1 第一道关：抽查 PDF 是不是可读文本（不是扫描件、不是乱码）。
 
-  python scripts/check_text.py --raw "C:\\Users\\Lenovo\\Desktop\\培养方案"
+  python scripts/check_text.py --raw data/raw
 
 对每份 PDF 取第 1/10/50 页，统计中文字符占比并打印前 60 字。
 判读标准：

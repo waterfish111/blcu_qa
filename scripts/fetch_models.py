@@ -2,7 +2,8 @@
 
 为什么要单独写这个脚本：
   1. 同一套模型在 ModelScope 和 HuggingFace 上的 ID 不一样，网络可达性也不一样；
-  2. 下载位置要可复现（本机统一放 D:\\ai_cache\\modelscope），不能靠每个脚本各自的默认值；
+  2. 下载位置要可复现（统一落在仓库内 models/，可用 BLCU_MODEL_CACHE 覆盖），
+     不能靠每个脚本各自的默认值；
   3. 下完之后要能回答"这个模型到底落在哪个目录"——写进 models.lock.json，检索层据此加载。
 
 用法：
@@ -24,8 +25,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 LOCK = ROOT / "models.lock.json"
 
-# 本机统一缓存目录；可用 BLCU_MODEL_CACHE 覆盖
-CACHE_DIR = Path(os.environ.get("BLCU_MODEL_CACHE", r"D:\ai_cache\modelscope"))
+# 统一缓存目录；可用 BLCU_MODEL_CACHE 指定别处
+CACHE_DIR = Path(os.environ.get("BLCU_MODEL_CACHE") or (ROOT / "models"))
 
 # 每个角色给一串候选 ID：先在 ModelScope 试，再退到 HuggingFace 镜像
 MODELS = {

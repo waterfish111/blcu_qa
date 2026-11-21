@@ -1,10 +1,10 @@
 """一步建索引：解析 -> 切块 -> 打印统计，为后续 BM25/dense 建库做准备。
 
-  # 语料在桌面，不搬进仓库，直接指过去
-  python scripts/build_index.py --raw "C:\\Users\\Lenovo\\Desktop\\培养方案"
+  # 语料（从学校官网下载的培养方案 PDF）放在 data/raw/，不搬进版本库
+  python scripts/build_index.py --raw data/raw
 
   # 只想快跑（跳过表格抽取），或换切块策略做消融
-  python scripts/build_index.py --raw ... --no-tables --mode window
+  python scripts/build_index.py --raw data/raw --no-tables --mode window
 """
 
 import argparse

@@ -4,7 +4,7 @@
 所以 version_policy=cohort，status 一律 active。学生手册这类才是 supersede。
 
 用法：
-  python scripts/scan_raw.py --raw "C:\\Users\\Lenovo\\Desktop\\培养方案" --out data/metadata.csv
+  python scripts/scan_raw.py --raw data/raw --out data/metadata.csv
   python scripts/scan_raw.py --raw data/raw --out data/metadata.csv --keep-existing
 """
 
