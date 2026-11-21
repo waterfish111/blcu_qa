@@ -1,16 +1,22 @@
-# 教务问答 RAG（blcu-qa）
+﻿# 教务问答 RAG（blcu-qa）
 
 面向北京语言大学本科培养方案的检索增强问答系统。语料是全校 2024 / 2025 / 2026 三个年级的培养方案
 （合订本共 4 卷），重点解决**结构切块**、**跨届版本隔离**、**混合检索**与**引用溯源**四个工程问题。
 
 ## 演示
 
+<img src="docs/screenshots/demo.gif" alt="演示：提问 → 检索重排 → 作答并标注出处" width="100%">
+
+上面这段是脚本自动录的（`scripts/record_demo.py`，用 Edge 的 DevTools 协议逐帧抓屏再合成 GIF，
+不是手动录屏）。流程：逐字输入问题 → 检索期间显示骨架屏 → 作答、每句带 `[n]` 角标 →
+滚到出处卡（专业 > 小节 + 相关度条）→ 点角标跳回对应原文并高亮。
+
 <p>
   <img src="docs/screenshots/answer.png" alt="正常作答：答案 + 每句话的出处" width="48%">
   <img src="docs/screenshots/abstain.png" alt="拒答：语料里没有的问题直接说没有" width="48%">
 </p>
 
-左边是正常作答：答案里的 `[1]` 是可点的角标，点一下会跳到下面第 1 段原文，卡片上带着
+左边是正常作答的静态截图：答案里的 `[1]` 是可点的角标，点一下会跳到下面第 1 段原文，卡片上带着
 「专业 > 小节」的路径和重排分数。右边是拒答：问"宿舍几点熄灯"，最高相关度只有 0.004，
 系统直接说查不到，而不是编一个看起来很像的答案。
 
@@ -62,6 +68,7 @@ blcu-qa/
     ├── scan_raw.py        # 扫语料目录，按文件名推断 cohort 与版本策略，生成 metadata.csv
     ├── check_text.py      # 每份 PDF 抽查 3 页：字数、中文占比、是否扫描件
     ├── quality_report.py  # 语料体检：碎片率、路径覆盖率、长度分布
+    ├── record_demo.py     # 用 Edge 的 DevTools 协议录演示 GIF（逐帧抓屏 + Pillow 合成）
     ├── build_index.py     # 一步跑完：解析 -> 切块 -> 统计
     └── run_eval.py        # 跑评测集
 ```
@@ -265,3 +272,4 @@ python scripts/fetch_models.py --which full    # bge-m3 + bge-reranker-v2-m3（�
 - 演示页刻意不引入前端框架与构建链（没有 npm / Vite / TS），换来"clone 下来 `python api.py`
   就能开"；代价是没有组件化、没有类型检查，页面只服务于这一个问答场景
 - 答案缓存只存在进程内存里（32 条，先进先出），服务重启即失效
+
