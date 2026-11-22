@@ -171,6 +171,8 @@ def ask(req: AskRequest):
         "reason": res.get("reason", ""),
         "citation_ok": res.get("citation_ok", False),
         "trimmed": res.get("trimmed", False),
+        # 拒答时模型可能只回了一句固定兜底话，前端不用重复显示它
+        "fallback": res["answer"].strip() == gen.ABSTAIN_TEXT.strip(),
         "top_score": round(hit["top_score"], 4),
         "threshold": THRESHOLD,
         "chunks": [cards[n] for n in sorted(cards)],

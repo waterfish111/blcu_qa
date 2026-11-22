@@ -29,20 +29,33 @@ const ABSTAIN_BOX = {
     icon: "📄",
     title: "这一页的表格读不出来",
     text: (d) => `命中的那几页，表格是用矢量线条画在 PDF 上的，文字层里只有零散数字，
-      没有行列关系。与其猜，不如告诉你页码，自己翻一眼：最高相关度 ${d.top_score.toFixed(3)}。`,
+      没有行列关系。最高相关度 ${d.top_score.toFixed(3)}。`,
   },
   model_abstained: {
     icon: "🔍",
     title: "模型判断资料里没有依据",
-    text: () => `检索到的片段相关度不低，但模型读完认为答不出这个问题——
-      它没有硬凑一个答案。`,
+    text: () => `检索到的片段相关度不低，但模型读完认为答不出这个问题。`,
+  },
+  citation_failed: {
+    icon: "🔍",
+    title: "回答里的说法在原文中核对不上",
+    text: (d) => `检索到的片段相关度是 ${d.top_score.toFixed(3)}，但模型写出的内容里有
+      在原文找不到依据的部分，按规则弃用。`,
+  },
+  no_citation: {
+    icon: "🔍",
+    title: "回答没有标出处",
+    text: () => `模型给了一段回答，但没有按要求标明出自哪一段，按规则弃用。`,
+  },
+  no_evidence: {
+    icon: "🔍",
+    title: "这个问题在培养方案里查不到可靠依据",
+    text: (d) => `最高相关度 ${d.top_score.toFixed(3)}，低于拒答阈值 ${d.threshold}。`,
   },
   default: {
     icon: "🔍",
-    title: "这个问题在培养方案里查不到可靠依据",
-    text: (d) => `最高相关度 ${d.top_score.toFixed(3)}，低于拒答阈值 ${d.threshold}。
-      与其编一个看起来很像的答案，不如直接说"没有"——培养方案里的学分、学时数字一旦答错，
-      学生按错的数字排课，代价比不回答大得多。`,
+    title: "没有找到能支撑回答的原文",
+    text: (d) => `最高相关度 ${d.top_score.toFixed(3)}。`,
   },
 };
 
@@ -212,7 +225,7 @@ function renderResult(data, ms) {
     box.innerHTML = `<div class="icon">${absorb.icon}</div><div>
       <h3>${absorb.title}</h3><p>${absorb.text(data)}</p></div>`;
     panel.appendChild(box);
-    if (data.answer) {  // 拒答但模型给了一段解释（例如"这页表格读不到"）
+    if (data.answer && !data.fallback) {  // 拒答但模型给了一段解释（例如"这页表格读不到"）
       const note = document.createElement("div");
       note.className = "answer abstain-answer";
       note.appendChild(renderAnswer(data.answer, data.used));
