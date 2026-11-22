@@ -47,6 +47,7 @@ const ABSTAIN_BOX = {
 };
 
 let busy = false;
+let modelWarm = false;      // 后台是否已把向量/重排模型加载进内存（影响第一次提问的等待）
 
 /* ---------- 把 [1][2] 变成可点的角标 ---------- */
 function renderAnswer(text, used) {
@@ -151,7 +152,9 @@ async function ask(question, cohort) {
   panel.hidden = false;
   panel.innerHTML = `<div class="skeleton"><i></i><i></i><i></i></div>
     <p style="margin:14px 0 0;font-size:13px;color:#7b8598">
-      正在用关键词和向量各找 20 段、再让重排模型逐段读一遍，通常 6–10 秒…</p>`;
+      ${modelWarm
+        ? "正在用关键词和向量各找 20 段、再让重排模型逐段读一遍，通常 2–4 秒…"
+        : "模型还在加载（首次启动需要 20–30 秒），这一次会慢一些，之后每次 2–4 秒…"}</p>`;
 
   const started = performance.now();
   try {
@@ -260,8 +263,36 @@ fetch("/health")
       tip.textContent = "提示：服务没读到 DEEPSEEK_API_KEY，只能检索不能生成答案。";
       document.querySelector(".hero .wrap").appendChild(tip);
     }
+    watchModel(h);
   })
   .catch(() => {});
+
+/* 模型是在后台线程里加载的：页面先开，加载完再放人提问。
+   不这样做的话，第一个问题会把 20~30 秒的模型加载时间算进"检索耗时"，
+   看起来像检索慢，其实是还没进内存。 */
+function watchModel(h) {
+  const tip = document.createElement("p");
+  tip.className = "tagline";
+  tip.id = "boot-status";
+  tip.style.color = "#b8860b";
+  document.querySelector(".hero .wrap").appendChild(tip);
+
+  const show = (state) => {
+    modelWarm = state;
+    tip.textContent = state ? "就绪，可以提问了" : "正在加载检索与重排模型（首次启动约 20–30 秒）…";
+    if (state) setTimeout(() => { tip.remove(); }, 4000);
+  };
+  if (h.warm) { show(true); return; }
+  show(false);
+
+  const timer = setInterval(async () => {
+    try {
+      const r = await fetch("/health");
+      const d = await r.json();
+      if (d.warm) { clearInterval(timer); show(true); }
+    } catch (e) { clearInterval(timer); }
+  }, 1500);
+}
 
 /* 支持带参数直接打开，方便把一个问题做成链接（截图、演示用）：
    http://127.0.0.1:8000/?q=2026级数字经济专业毕业总学分&cohort=2026级 */

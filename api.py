@@ -15,6 +15,7 @@
 import json
 import os
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -45,7 +46,12 @@ app.add_middleware(
 )
 
 retriever = None
-ready = {"chunks": 0, "dense": False, "build_seconds": None, "error": None}
+ready = {"chunks": 0, "dense": False, "build_seconds": None, "error": None,
+         "warm": False, "warm_seconds": None}
+
+# 后台预热：第一次检索要加载 512 维向量模型和 1.1GB 的重排模型，
+# 冷磁盘上要 20~30 秒。放在线程里做，/health 立刻可用，前端能显示"加载中"。
+_warm_done = threading.Event()
 
 # 演示时同一个问题常被反复问（面试官会点第二遍），把整条结果缓存住。
 # 只缓存 32 条、按最近使用淘汰——不是为了性能，是为了"第二遍立刻出来"的观感。
@@ -78,10 +84,30 @@ def startup():
           % (ready["chunks"], ready["dense"], ready["build_seconds"]))
 
     if os.environ.get("BLCU_WARMUP") == "1":
-        # 预热：第一次查询要现编向量、加载重排模型，预热掉省得演示时卡 10 秒
+        # 兼容旧行为：同步预热（调试时想确认能跑通）
         t = time.time()
         retriever.search("数字经济专业准予毕业总学分", topk=TOPK)
         print("[api] 预热完成 %.1fs" % (time.time() - t))
+        ready["warm"] = True
+        ready["warm_seconds"] = round(time.time() - t, 1)
+        _warm_done.set()
+        return
+
+    threading.Thread(target=_warmup, daemon=True).start()
+
+
+def _warmup():
+    """把向量模型和重排模型加载进来，顺便跑一次空检索。"""
+    t = time.time()
+    try:
+        retriever.search("数字经济专业准予毕业总学分", topk=TOPK)
+    except Exception as exc:            # 预热失败不影响后面报错，只是慢
+        print("[api] 预热失败：%r" % (exc,))
+    finally:
+        ready["warm"] = True
+        ready["warm_seconds"] = round(time.time() - t, 1)
+        _warm_done.set()
+        print("[api] 预热完成 %.1fs（之后每次提问 2~4 秒）" % ready["warm_seconds"])
 
 
 class AskRequest(BaseModel):
@@ -95,13 +121,19 @@ def health():
     has_key = bool(os.environ.get("DEEPSEEK_API_KEY") or gen.load_dotenv())
     return {"ok": retriever is not None, "chunks": ready["chunks"],
             "dense": ready["dense"], "threshold": THRESHOLD,
-            "build_seconds": ready["build_seconds"], "llm_ready": has_key}
+            "build_seconds": ready["build_seconds"], "llm_ready": has_key,
+            "warm": ready["warm"], "warm_seconds": ready["warm_seconds"]}
 
 
 @app.post("/ask")
 def ask(req: AskRequest):
     if retriever is None:
         return JSONResponse(status_code=503, content={"error": "检索器还在初始化"})
+
+    # 模型还在后台加载时，第一个问题等它（最长 3 分钟），
+    # 否则用户会以为是"检索慢"，其实是"模型还没进内存"。
+    if not _warm_done.is_set():
+        _warm_done.wait(timeout=180)
 
     key = (req.question.strip(), req.cohort.strip(), req.topk)
     if key in _CACHE:
