@@ -70,7 +70,7 @@ blcu-qa/
 │   ├── metadata.csv       # 文档清单：年级、有效期、版本策略（scan_raw.py 生成）
 │   └── chunks.jsonl       # 切块产物（脚本生成）
 ├── eval/
-│   ├── questions.jsonl    # 评测集：问题 + 金标答案 + 金标片段
+│   ├── questions.jsonl    # 评测集：62 题（30 人工 + 32 脚本生成），含金标答案与金标片段
 │   └── results/           # 每次实验的指标快照，简历数字来源
 ├── src/
 │   ├── parse.py           # PDF/HTML -> 纯文本 + 表格（表格就地插回该页）
@@ -102,15 +102,17 @@ python scripts/build_index.py --raw data/raw
 # 3. 语料体检：碎片率、路径覆盖率、长度分布（改完切块逻辑后加 --rechunk）
 python scripts/quality_report.py --rechunk
 
-# 4. 跑评测（先用 eval/questions.jsonl 里的样例）
+# 4. 跑评测（eval/questions.jsonl 里有 62 题：30 道人工 + 32 道脚本生成）
 python scripts/run_eval.py --pred eval/results/pred_baseline.jsonl
+python src/eval.py --pred eval/results/pred_baseline.jsonl --out eval/results/metrics_baseline.json
+#    想看看自动题怎么来的（不写文件）：
+python scripts/gen_questions.py --dry-run
 
 # 5. 接上生成层（先花两毛钱试通 5 题，再跑全量）
 cp .env.example .env      # 里面填 DEEPSEEK_API_KEY=sk-...
 python scripts/ask.py "2024 版汉语言文学专业准予毕业课程学分是多少？" --cohort 2024级
 python scripts/run_eval.py --limit 5 --pred eval/results/pred_smoke.jsonl
 python src/eval.py --pred eval/results/pred_smoke.jsonl --out eval/results/metrics_smoke.json
-
 # 6. 打开演示页（检索器启动时建一次索引，约 5 秒）
 python api.py        # http://127.0.0.1:8000
 ```
@@ -253,6 +255,27 @@ PDF 文本层按列输出时，正文会被拆成一字一行，这个值就飙�
 
 （表里前五行是在 5,700 块的旧语料上量的；现语料 6,129 块、多了 133 个 `【未索引】` 标记块，
 最后一行按现语料重测：recall@1/@5/@10 不变，MRR 0.621 → 0.614。）
+
+**题库扩到 62 题之后（`eval/results/metrics_62.json`）**：
+
+| 指标 | 30 题（人工） | 62 题（人工 30 + 自动 32） |
+| --- | --- | --- |
+| 可答题数 | 24 | 56 |
+| recall@1 | 0.542 | **0.732** |
+| recall@5 | 0.708 | **0.875** |
+| recall@10 | 0.792 | **0.911** |
+| MRR | 0.614 | **0.796** |
+| false_abstain_rate | 0.083 | **0.036** |
+| abstain_accuracy | 1.00 | **1.00** |
+
+新增的 32 题由 `scripts/gen_questions.py` 自动生成：只从「毕业要求 / 培养方案基本框架」这两类块里
+抽「总学分、课程总学时、模块学分、学位类型」四类数字，每个专业最多出 1–2 题，跨 2024/2025/2026 三届，
+再人工抽查过专业归属（`is_multi_major()` 会把"一个页面写好几个专业"的页剔掉）。
+
+**但这两个口径不能混着说**：自动题的问法和原文措辞高度重合（问「准予毕业总学分是多少」，
+原文就是「准予毕业总学分：149 学分」），比人工题好检索；1 道题的分量也从 4.2 个百分点降到 1.6 个点。
+对外只报一个口径，简历上写的是 30 题人工集的那组保守数字。
+
 
 三层结论：
 

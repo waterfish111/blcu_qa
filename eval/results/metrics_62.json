@@ -1,0 +1,14 @@
+{
+ "n_questions": 62,
+ "n_scored": 62,
+ "missing_pred_ids": [],
+ "n_with_gold": 56,
+ "recall@1": 0.7321,
+ "recall@5": 0.875,
+ "recall@10": 0.9107,
+ "mrr": 0.7957,
+ "false_abstain_rate": 0.0357,
+ "abstain_accuracy": 1.0,
+ "stale_misuse_rate": 0.0,
+ "n_answerable": 56
+}
