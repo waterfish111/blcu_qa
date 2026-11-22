@@ -12,6 +12,7 @@
 
 import json
 import math
+import os
 import re
 from collections import Counter
 from pathlib import Path
@@ -204,6 +205,17 @@ class HybridRetriever:
             from sentence_transformers import CrossEncoder
             if self._reranker is None:
                 self._reranker = CrossEncoder(self.rerank_model_name)
+                # BLCU_RERANK_INT8=1 时把 Linear 层换成 int8 动态量化：
+                # CPU 上快约 1.5 倍，代价是打分有轻微偏差（量化误差），
+                # 详见 scripts/bench_rerank.py 与 README「重排量化」一节。
+                if os.environ.get("BLCU_RERANK_INT8", "") in ("1", "true", "yes"):
+                    import gc
+                    import torch
+                    torch.ao.quantization.quantize_dynamic(
+                        self._reranker.model, {torch.nn.Linear},
+                        dtype=torch.qint8, inplace=True,
+                    )
+                    gc.collect()
             # 重排也要看到面包屑：跨届题的正文在不同专业里一字不差，
             # 只把 text 喂给 cross-encoder，模型根本分不清是哪一届哪个专业，
             # 实测就把 recall@5 从 0.625 拉低到 0.542。
