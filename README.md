@@ -327,6 +327,7 @@ python scripts/fetch_models.py --which full    # bge-m3 + bge-reranker-v2-m3（�
 
 怎么用：`BLCU_RERANK_INT8=1 python api.py`（默认关闭）。**不落盘**——量化在模型加载后原地做，
 耗时 3.7 秒；与其维护第二份 816MB 权重，不如每次启动多花这 4 秒。
+端到端体感：`/ask` 里 `latency_ms.search` 从约 1.9 s 降到约 1.1 s（同机同题实测）。
 
 要真想把内存降下来得对 embedding 下手（词表裁剪或 int8 静态量化 + ONNX），那是另一个工程量级，
 在这个项目里收益/成本不划算，写在这里作为已知边界。
